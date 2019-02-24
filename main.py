@@ -1,10 +1,12 @@
 import json
-from tkinter import (BOTH, DISABLED, END, LEFT, NORMAL, RIGHT, YES, Button, E,
-                     Entry, Frame, Label, N, S, Scrollbar, Text, Tk, W, X, Y, Canvas, INSERT, Menu)
+from tkinter import (BOTH, DISABLED, END, INSERT, LEFT, NORMAL, RIGHT, YES,
+                     Button, Canvas, E, Entry, Frame, Label, Menu, N, S,
+                     Scrollbar, Text, Tk, W, X, Y)
+import tools
 
 
 class App:
-    def __init__(self, master):
+    def __init__(self, master: Tk):
         self._master = master
         self._master.title("Monoalphabetische Substitution")
         self._mapping = list()
@@ -41,17 +43,17 @@ class App:
         self._menu_file.add_command(
             label="Beispieltext laden", command=self._load_example)
 
-    def _load_example(self):
+    def _load_example(self) -> None:
         with open("esel.txt", "r") as file:
-            self._write_to_text(self._txt_input, file.read())
+            tools.write_to_text(self._txt_input, file.read())
             self._update_mapping_gui()
 
-    def _update_mapping_gui(self, *args):
+    def _update_mapping_gui(self, *args) -> None:
         """
         updates the mapping gui (labels and entries)
         fired when the input text changes
 
-        invokes _update_output automatically
+        updates output automatically
         """
         old_chars = self._chars.copy()
         # all characters in the input
@@ -59,7 +61,7 @@ class App:
 
         # destroy mappings that aren't needed anymore
         for lbl, ent in self._mapping[:]:
-            if self._from_label(lbl["text"]) not in self._chars:
+            if tools.from_label(self._char_labels, lbl["text"]) not in self._chars:
                 lbl.destroy()
                 ent.destroy()
                 self._mapping.remove((lbl, ent))
@@ -70,7 +72,8 @@ class App:
         # create new mapping if they don't already exist
         for c in self._chars:
             if c not in old_chars:
-                lbl = Label(self._mapping_frame, text=self._to_label(c))
+                lbl = Label(self._mapping_frame,
+                            text=tools.to_label(self._char_labels, c))
                 ent = Entry(self._mapping_frame)
                 ent.bind("<KeyRelease>", self._update_output)
                 self._mapping.append((lbl, ent))
@@ -87,15 +90,16 @@ class App:
                 i = 0
         self._update_output(*args)
 
-    def _update_output(self, *args):
+    def _update_output(self, *args) -> None:
         text = self._txt_input.get(1.0, "end-1c")
-        mapping_dict = self._create_mapping_dict()
+        mapping_dict = tools.create_mapping_dict(
+            self._char_labels, self._mapping)
 
         # make widget writeable
         self._txt_output.config(state=NORMAL)
         self._txt_output.delete(1.0, END)
         for c in text:
-            modified, char = self._replace_char(mapping_dict, c)
+            modified, char = tools.replace_char(mapping_dict, c)
             self._txt_output.insert("end", char)
             pos = self._txt_output.index(INSERT)
             prev_pos = pos.split(".")[0] + "." + str(int(pos.split(".")[1])-1)
@@ -107,32 +111,10 @@ class App:
         # make widget unwriteable again
         self._txt_output.config(state=DISABLED)
 
-    def _write_to_text(self, text: Text, string):
-        """Deletes text of Text Widget and fills it with string param"""
-        text.delete(1.0, END)
-        text.insert("end", string)
-        text.see("end")
-
-    def _replace_char(self, mapping_dict: dict, c: str) -> ():
-        """Maps one character to another"""
-        return (True, mapping_dict[c]) if c in mapping_dict and mapping_dict[c] else (False, c)
-
-    def _create_mapping_dict(self):
-        """Creates mapping dictionary from labels and entries"""
-        return {self._from_label(lbl["text"]): ent.get() for lbl, ent in self._mapping}
-
-    def _to_label(self, c: str) -> str:
-        return self._char_labels[c] if c in self._char_labels and self._char_labels[c] else c
-
-    def _from_label(self, c: str) -> str:
-        rev_char_labels = rev_dict = {
-            v: k for k, v in self._char_labels.items()}
-        return rev_char_labels[c] if c in rev_char_labels and rev_char_labels[c] else c
-
 
 root = Tk()
 app = App(root)
-root.geometry("1000x800")
+root.geometry("1200x800")
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
 root.grid_rowconfigure(1, weight=1)
